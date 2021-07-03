@@ -1,9 +1,5 @@
-import sys
-sys.path.append("..")
 
 import numpy as np
-import os
-
 from pycolmap import SceneManager
 
 
@@ -37,26 +33,26 @@ def save_camera_ply(ply_file, images, scale):
     color = np.column_stack((r, g, b))
 
     with open(ply_file, "w") as fid:
-        print>>fid, "ply"
-        print>>fid, "format ascii 1.0"
-        print>>fid, "element vertex", len(points3D) * len(images)
-        print>>fid, "property float x"
-        print>>fid, "property float y"
-        print>>fid, "property float z"
-        print>>fid, "property uchar red"
-        print>>fid, "property uchar green"
-        print>>fid, "property uchar blue"
-        print>>fid, "element face", len(faces) * len(images)
-        print>>fid, "property list uchar int vertex_index"
-        print>>fid, "end_header"
+        fid.write("ply\n")
+        fid.write("format ascii 1.0\n")
+        fid.write(f"element vertex {len(points3D) * len(images)}\n")
+        fid.write("property float x\n")
+        fid.write("property float y\n")
+        fid.write("property float zn")
+        fid.write("property uchar red\n")
+        fid.write("property uchar green")
+        fid.write("property uchar blue\n")
+        fid.write(f"element face {len(faces) * len(images)}\n")
+        fid.write("property list uchar int vertex_index\n")
+        fid.write("end_header\n")
 
         for image, c in zip(images, color):
             for p3D in (points3D.dot(image.R()) + image.C()):
-                print>>fid, p3D[0], p3D[1], p3D[2], c[0], c[1], c[2]
+                fid.write(f"{p3D[0]} {p3D[1]} {p3D[2]} {c[0]} {c[1]} {c[2]}\n")
 
-        for i in xrange(len(images)):
+        for i in range(len(images)):
             for f in (faces + len(points3D) * i):
-                print>>fid, "3 {} {} {}".format(*f)
+                fid.write("3 {} {} {}".format(*f))
 
 
 #-------------------------------------------------------------------------------
@@ -65,7 +61,7 @@ def main(args):
     scene_manager = SceneManager(args.input_folder)
     scene_manager.load_images()
 
-    images = sorted(scene_manager.images.itervalues(),
+    images = sorted(scene_manager.images.values(),
                     key=lambda image: image.name)
 
     save_camera_ply(args.output_file, images, args.scale)

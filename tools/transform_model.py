@@ -1,5 +1,4 @@
 import sys
-sys.path.append("..")
 
 import numpy as np
 
@@ -14,7 +13,7 @@ def main(args):
 
     # expect each line of input corresponds to one row
     P = np.array([
-        map(float, sys.stdin.readline().strip().split()) for _ in xrange(3)])
+        map(float, sys.stdin.readline().strip().split()) for _ in range(3)])
 
     scene_manager.points3D[:] = scene_manager.points3D.dot(P[:,:3].T) + P[:,3]
 
@@ -22,7 +21,7 @@ def main(args):
     scale = np.cbrt(np.linalg.det(P[:,:3]))
     q_old_from_new = ~Quaternion.FromR(P[:,:3] / scale)
 
-    for image in scene_manager.images.itervalues():
+    for image in scene_manager.images.values():
         image.q *= q_old_from_new
         image.tvec = scale * image.tvec - image.R().dot(P[:,3])
 

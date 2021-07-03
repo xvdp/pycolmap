@@ -1,10 +1,8 @@
 import itertools
-import sys
-sys.path.append("..")
+# import sys
+# sys.path.append("..")
 
-import numpy as np
-
-from pycolmap import Quaternion, SceneManager
+from pycolmap import SceneManager
 
 
 #-------------------------------------------------------------------------------
@@ -17,7 +15,7 @@ def main(args):
         fid.write("NVM_V3\n \n{:d}\n".format(len(scene_manager.images)))
 
         image_fmt_str = " {:.3f} " + 7 * "{:.7f} "
-        for image_id, image in scene_manager.images.iteritems():
+        for image_id, image in scene_manager.images.items():
             camera = scene_manager.cameras[image.camera_id]
             f = 0.5 * (camera.fx + camera.fy)
             fid.write(args.image_name_prefix + image.name)

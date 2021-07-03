@@ -1,7 +1,6 @@
-import numpy as np
 import os
 import sqlite3
-
+import numpy as np
 
 #-------------------------------------------------------------------------------
 # convert SQLite BLOBs to/from numpy arrays
@@ -11,7 +10,6 @@ def array_to_blob(arr):
 
 def blob_to_array(blob, dtype, shape=(-1,)):
     return np.frombuffer(blob, dtype).reshape(*shape)
-
 
 #-------------------------------------------------------------------------------
 # convert to/from image pair ids
@@ -161,7 +159,6 @@ def add_matches(db, image_id1, image_id2, matches):
     db.execute("INSERT INTO matches VALUES (?, ?, ?, ?)",
         (pair_id,) + matches.shape + (array_to_blob(matches),))
 
-
 #-------------------------------------------------------------------------------
 # simple functional interface
 
@@ -169,7 +166,6 @@ class COLMAPDatabase(sqlite3.Connection):
     @staticmethod
     def connect(database_path):
         return sqlite3.connect(database_path, factory=COLMAPDatabase)
-
 
     def __init__(self, *args, **kwargs):
         super(COLMAPDatabase, self).__init__(*args, **kwargs)
@@ -191,7 +187,6 @@ class COLMAPDatabase(sqlite3.Connection):
 
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
 
-
     add_camera = add_camera
     add_descriptors = add_descriptors
     add_image = add_image
@@ -199,14 +194,12 @@ class COLMAPDatabase(sqlite3.Connection):
     add_keypoints = add_keypoints
     add_matches = add_matches
 
-
 #-------------------------------------------------------------------------------
 
 def main(args):
-    import os
 
     if os.path.exists(args.database_path):
-        print "Error: database path already exists -- will not modify it."
+        print("Error: database path already exists -- will not modify it.")
         exit()
 
     db = COLMAPDatabase.connect(args.database_path)
@@ -317,7 +310,7 @@ def main(args):
     assert np.all(matches[(1, 2)] == m12)
     assert np.all(matches[(2, 3)] == m23)
     assert np.all(matches[(3, 4)] == m34)
-    
+
     #
     # clean up
     #

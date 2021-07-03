@@ -1,2 +1,9 @@
 *.pyc
 *.sw*
+.vscode/
+build/
+dist/
+
+
+pycolmap.egg-info/
+pycolmap/version.py

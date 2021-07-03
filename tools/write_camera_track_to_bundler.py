@@ -1,10 +1,5 @@
-import sys
-sys.path.append("..")
-
-import numpy as np
 
 from pycolmap import SceneManager
-
 
 #-------------------------------------------------------------------------------
 
@@ -15,29 +10,26 @@ def main(args):
 
     if args.sort:
         images = sorted(
-            scene_manager.images.itervalues(), key=lambda im: im.name)
+            scene_manager.images.values(), key=lambda im: im.name)
     else:
         images = scene_manager.images.values()
 
-    fid = open(args.output_file, "w")
-    fid_filenames = open(args.output_file + ".list.txt", "w")
+    with open(args.output_file, "w") as fid:
+        with open(args.output_file + ".list.txt", "w") as fid_filenames:
+            fid.write("# Bundle file v0.3")
+            fid.write(f"{len(images)} {0}")
 
-    print>>fid, "# Bundle file v0.3"
-    print>>fid, len(images), 0
+            for image in images:
+                fid_filenames.write(image.name)
 
-    for image in images:
-        print>>fid_filenames, image.name
-        camera = scene_manager.cameras[image.camera_id]
-        print>>fid, 0.5 * (camera.fx + camera.fy), 0, 0
-        R, t = image.R(), image.t
-        print>>fid, R[0, 0], R[0, 1], R[0, 2]
-        print>>fid, -R[1, 0], -R[1, 1], -R[1, 2]
-        print>>fid, -R[2, 0], -R[2, 1], -R[2, 2]
-        print>>fid, t[0], -t[1], -t[2]
+                camera = scene_manager.cameras[image.camera_id]
+                fid.write(f"{0.5 * (camera.fx + camera.fy)} {0} {0}")
 
-    fid.close()
-    fid_filenames.close()
-
+                R, t = image.R(), image.t
+                fid.write(f"{R[0, 0]} {R[0, 1]} {R[0, 2]}")
+                fid.write(f"{-R[1, 0]} {-R[1, 1]} {-R[1, 2]}")
+                fid.write(f"{-R[2, 0]} {-R[2, 1]} {-R[2, 2]}")
+                fid.write(f"{t[0]} {-t[1]} {-t[2]}")
 
 #-------------------------------------------------------------------------------
 

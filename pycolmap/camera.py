@@ -23,10 +23,22 @@ def opencv_distortion(camera, x):
     xy = np.prod(x, axis=-1, keepdims=True)
     r_sq = x_sq.sum(axis=-1, keepdims=True)
 
+    # check if correct. input 'x' refers to positions (x,y)
+    x_sq = x_sq[..., :1]
+    y_sq = x_sq[..., -1:]
+
     return x * (1. + r_sq * (camera.k1 + camera.k2 * r_sq)) + np.concatenate((
         2. * camera.p1 * xy + camera.p2 * (r_sq + 2. * x_sq),
         camera.p1 * (r_sq + 2. * y_sq) + 2. * camera.p2 * xy),
         axis=-1)
+
+"""
+    something wrong with sthis function x_sq, refers to both x, y
+    $x_d = x + [2 p_1 xy + p_2(r^2 + 2x^2)]$
+    $y_d = x + [2 p_2 xy + p_1(r^2 + 2y^2)]$
+
+    x_sq = np.square[...,-1]
+"""
 
 
 #-------------------------------------------------------------------------------
@@ -251,7 +263,7 @@ class Camera:
             xu = root(objective, x).x.reshape(*x.shape)
         else:
             xu = x
-            
+
         if denormalize:
             xu *= np.array([[self.fx, self.fy]])
             xu += np.array([[self.cx, self.cy]])

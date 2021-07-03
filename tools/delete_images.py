@@ -1,9 +1,8 @@
 import sys
-sys.path.append("..")
+# sys.path.append("..")
 
-import numpy as np
 
-from pycolmap import DualQuaternion, Image, SceneManager
+from pycolmap import SceneManager
 
 
 #-------------------------------------------------------------------------------

@@ -1,7 +1,4 @@
-import sys
-sys.path.append("..")
 
-import numpy as np
 
 from pycolmap import DualQuaternion, Image, SceneManager
 
@@ -36,7 +33,7 @@ def interpolate_linear(images, camera_id, file_format):
         if prev_dq.q0.dot(curr_dq.q0) < 0:
             curr_dq = -curr_dq
 
-        for i in xrange(1, T):
+        for i in range(1, T):
             t = i * Tinv
             dq = t * prev_dq + (1. - t) * curr_dq
             q, t = dq.ToQT()
@@ -67,7 +64,7 @@ def interpolate_hermite(images, camera_id, file_format):
     if dq0.q0.dot(dq1.q0) < 0:
         dq1 = -dq1
     dT = 1. / float(T1 - T0)
-    for j in xrange(1, T1 - T0):
+    for j in range(1, T1 - T0):
         t = j * dT
         dq = ((1. - t) * dq0 + t * dq1).normalize()
         new_images.append(
@@ -80,7 +77,7 @@ def interpolate_hermite(images, camera_id, file_format):
 
     # Hermite spline interpolation of dual quaternions
     # pdfs.semanticscholar.org/05b1/8ede7f46c29c2722fed3376d277a1d286c55.pdf
-    for i in xrange(1, len(images) - 2):
+    for i in range(1, len(images) - 2):
         T3 = image_to_idx(images[i + 2])
         dq3 = DualQuaternion.FromQT(images[i + 2].q, images[i + 2].t)
         if dq2.q0.dot(dq3.q0) < 0:
@@ -102,7 +99,7 @@ def interpolate_hermite(images, camera_id, file_format):
 
         dT = 1. / float(current_duration)
 
-        for j in xrange(1, current_duration):
+        for j in range(1, current_duration):
             t = j * dT # 0 to 1
             t2 = t * t # t squared
             t3 = t2 * t # t cubed
@@ -123,12 +120,12 @@ def interpolate_hermite(images, camera_id, file_format):
 
     # linear blending for the last frames
     dT = 1. / float(T2 - T1)
-    for j in xrange(1, T2 - T1):
+    for j in range(1, T2 - T1):
         t = j * dT # 0 to 1
         dq = ((1. - t) * dq1 + t * dq2).normalize()
         new_images.append(
             Image(file_format.format(T1 + j), camera_id, *dq.ToQT()))
-    
+
     return new_images
 
 
@@ -138,7 +135,7 @@ def main(args):
     scene_manager = SceneManager(args.input_folder)
     scene_manager.load()
 
-    images = sorted(scene_manager.images.itervalues(), key=image_to_idx)
+    images = sorted(scene_manager.images.values(), key=image_to_idx)
 
     if args.method.lower() == "linear":
         new_images = interpolate_linear(images, args.camera_id, args.format)
