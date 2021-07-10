@@ -1,5 +1,5 @@
 # Author: True Price <jtprice at cs.unc.edu>
-
+import logging
 import os
 import struct
 from collections import OrderedDict, defaultdict
@@ -124,6 +124,7 @@ class SceneManager:
     #---------------------------------------------------------------------------
 
     def load_images(self, input_file=None):
+        print("load images")
         if input_file is None:
             input_file = self.folder + 'images.bin'
             if os.path.exists(input_file):
@@ -137,37 +138,39 @@ class SceneManager:
 
     def _load_images_bin(self, input_file):
         self.images = OrderedDict()
+        try:
+            with open(input_file, 'rb') as f:
+                num_images = struct.unpack('L', f.read(8))[0]
 
-        with open(input_file, 'rb') as f:
-            num_images = struct.unpack('L', f.read(8))[0]
+                for _ in range(num_images):
+                    image_id = struct.unpack('I', f.read(4))[0]
+                    q = Quaternion(np.array(struct.unpack('dddd', f.read(32))))
+                    t = np.array(struct.unpack('ddd', f.read(24)))
+                    camera_id = struct.unpack('I', f.read(4))[0]
+                    name = b''.join(c for c in iter(lambda: f.read(1), b'\x00')).decode()
 
-            for _ in range(num_images):
-                image_id = struct.unpack('I', f.read(4))[0]
-                q = Quaternion(np.array(struct.unpack('dddd', f.read(32))))
-                t = np.array(struct.unpack('ddd', f.read(24)))
-                camera_id = struct.unpack('I', f.read(4))[0]
-                name = ''.join(c for c in iter(lambda: f.read(1), '\0'))
+                    image = Image(name, camera_id, q, t)
 
-                image = Image(name, camera_id, q, t)
+                    num_points2D = struct.unpack('L', f.read(8))[0]
 
-                num_points2D = struct.unpack('L', f.read(8))[0]
+                    image.points2D = np.empty((num_points2D, 2))
+                    image.point3D_ids = np.empty(num_points2D, dtype=np.uint64)
+                    tmp = np.fromfile(f, dtype=[('x', '(2,)f8'), ('id', 'u8')],
+                                      count=num_points2D)
+                    image.points2D = tmp["x"]
+                    image.point3D_ids = tmp["id"]
 
-                image.points2D = np.empty((num_points2D, 2))
-                image.point3D_ids = np.empty(num_points2D, dtype=np.uint64)
-                tmp = np.fromfile(f, dtype=[('x', '(2,)f8'), ('id', 'u8')],
-                                  count=num_points2D)
-                image.points2D = tmp["x"]
-                image.point3D_ids = tmp["id"]
+                    # automatically remove points without an associated 3D point
+                    #mask = (image.point3D_ids != SceneManager.INVALID_POINT3D)
+                    #image.points2D = image.points2D[mask]
+                    #image.point3D_ids = image.point3D_ids[mask]
 
-                # automatically remove points without an associated 3D point
-                #mask = (image.point3D_ids != SceneManager.INVALID_POINT3D)
-                #image.points2D = image.points2D[mask]
-                #image.point3D_ids = image.point3D_ids[mask]
+                    self.images[image_id] = image
+                    self.name_to_image_id[image.name] = image_id
 
-                self.images[image_id] = image
-                self.name_to_image_id[image.name] = image_id
-
-                self.last_image_id = max(self.last_image_id, image_id)
+                    self.last_image_id = max(self.last_image_id, image_id)
+        except Exception as e:
+            logging.exception("Failure reading bin camera")
 
     def _load_images_txt(self, input_file):
         self.images = OrderedDict()
