@@ -1,6 +1,8 @@
 # Author: True Price <jtprice at cs.unc.edu>
+# mod xvdp
 import logging
 import os
+import os.path as osp
 import struct
 from collections import OrderedDict, defaultdict
 from itertools import combinations
@@ -20,11 +22,13 @@ from .rotation import Quaternion
 class SceneManager:
     INVALID_POINT3D = np.uint64(-1)
 
-    def __init__(self, colmap_results_folder, image_path=None):
-        self.folder = colmap_results_folder
-        if not self.folder.endswith('/'):
-            self.folder += '/'
+    def __init__(self, colmap_results_folder, image_path=None, verbose=False):
 
+        self._verbose = verbose
+        assert osp.isdir(colmap_results_folder), f"folder not found {colmap_results_folder}"
+        assert osp.isdir(image_path),  f"folder not found {image_path}"
+
+        self.folder = colmap_results_folder
         self.image_path = None
         self.load_colmap_project_file(image_path=image_path)
 
@@ -54,7 +58,7 @@ class SceneManager:
 
     def load_colmap_project_file(self, project_file=None, image_path=None):
         if project_file is None:
-            project_file = self.folder + 'project.ini'
+            project_file = osp.join(self.folder, 'project.ini')
 
         self.image_path = image_path
 
@@ -70,29 +74,29 @@ class SceneManager:
 
         if self.image_path is None:
             print('Warning: image_path not found for reconstruction')
-        elif not self.image_path.endswith('/'):
-            self.image_path += '/'
 
     #---------------------------------------------------------------------------
 
-    def load(self):
+    def load(self, min_track_length=10):
         self.load_cameras()
         self.load_images()
         self.load_points3D()
+        self.filter_points3D(min_track_len=min_track_length)
 
     #---------------------------------------------------------------------------
 
     def load_cameras(self, input_file=None):
         if input_file is None:
-            input_file = self.folder + 'cameras.bin'
-            if os.path.exists(input_file):
-                self._load_cameras_bin(input_file)
-            else:
-                input_file = self.folder + 'cameras.txt'
-                if os.path.exists(input_file):
-                    self._load_cameras_txt(input_file)
-                else:
-                    raise IOError('no cameras file found')
+            input_file = osp.join(self.folder, 'cameras.bin')
+        if not osp.isfile(input_file):
+            input_file = osp.join(self.folder, 'cameras.txt')
+        assert osp.isfile(input_file) and input_file[-4:] in (".bin", ".txt"), f"camera file {input_file} not found"
+
+        if input_file[-4:] == ".bin":
+            self._load_cameras_bin(input_file)
+        else:
+            self._load_cameras_txt(input_file)
+
 
     def _load_cameras_bin(self, input_file):
         self.cameras = OrderedDict()
@@ -106,11 +110,14 @@ class SceneManager:
                 params = struct.unpack('d' * num_params, f.read(8 * num_params))
                 self.cameras[camera_id] = Camera(camera_type, w, h, params)
                 self.last_camera_id = max(self.last_camera_id, camera_id)
+            if self._verbose:
+                print(f"Loaded {num_cameras} binary cameras from {input_file}")
 
     def _load_cameras_txt(self, input_file):
         self.cameras = OrderedDict()
 
         with open(input_file, 'r') as f:
+            num_cameras = 0
             for line in iter(lambda: f.readline().strip(), ''):
                 if not line or line.startswith('#'):
                     continue
@@ -120,21 +127,25 @@ class SceneManager:
                 self.cameras[camera_id] = Camera(
                     data[1], int(data[2]), int(data[3]), map(float, data[4:]))
                 self.last_camera_id = max(self.last_camera_id, camera_id)
+            num_cameras += 1
+        if self._verbose:
+            print(f"Loaded {num_cameras} ascii cameras from {input_file}")
 
     #---------------------------------------------------------------------------
 
     def load_images(self, input_file=None):
-        print("load images")
+
         if input_file is None:
-            input_file = self.folder + 'images.bin'
-            if os.path.exists(input_file):
-                self._load_images_bin(input_file)
-            else:
-                input_file = self.folder + 'images.txt'
-                if os.path.exists(input_file):
-                    self._load_images_txt(input_file)
-                else:
-                    raise IOError('no images file found')
+            input_file = osp.join(self.folder, 'images.bin')
+        if not osp.isfile(input_file):
+            input_file = osp.join(self.folder, 'images.txt')
+        assert osp.isfile(input_file) and input_file[-4:] in (".bin", ".txt"), f"image file {input_file} not found"
+
+        if input_file[-4:] == ".bin":
+            self._load_images_bin(input_file)
+        else:
+            self._load_images_txt(input_file)
+
 
     def _load_images_bin(self, input_file):
         self.images = OrderedDict()
@@ -169,12 +180,15 @@ class SceneManager:
                     self.name_to_image_id[image.name] = image_id
 
                     self.last_image_id = max(self.last_image_id, image_id)
+            if self._verbose:
+                print(f"Loaded {num_images} bin images from {input_file}")
+
         except Exception as e:
             logging.exception("Failure reading bin camera")
 
     def _load_images_txt(self, input_file):
         self.images = OrderedDict()
-
+        num_images = 0
         with open(input_file, 'r') as f:
             is_camera_description_line = False
 
@@ -205,20 +219,25 @@ class SceneManager:
                     self.name_to_image_id[image.name] = image_id
 
                     self.last_image_id = max(self.last_image_id, image_id)
+                num_images += 1
+        if self._verbose:
+            print(f"Loaded {num_images} ascii images from {input_file}")
 
     #---------------------------------------------------------------------------
 
     def load_points3D(self, input_file=None):
+
         if input_file is None:
-            input_file = self.folder + 'points3D.bin'
-            if os.path.exists(input_file):
-                self._load_points3D_bin(input_file)
-            else:
-                input_file = self.folder + 'points3D.txt'
-                if os.path.exists(input_file):
-                    self._load_points3D_txt(input_file)
-                else:
-                    raise IOError('no points3D file found')
+            input_file = osp.join(self.folder, 'points3D.bin')
+        if not osp.isfile(input_file):
+            input_file = osp.join(self.folder, 'points3D.txt')
+        assert osp.isfile(input_file) and input_file[-4:] in (".bin", ".txt"), f"points file {input_file} not found"
+
+        if input_file[-4:] == ".bin":
+            self._load_points3D_bin(input_file)
+        else:
+            self._load_points3D_txt(input_file)
+
 
     def _load_points3D_bin(self, input_file):
         with open(input_file, 'rb') as f:
@@ -245,6 +264,9 @@ class SceneManager:
                     'I' * (2 * track_len), f.read(2 * track_len * 4))
                 self.point3D_id_to_images[self.point3D_ids[i]] = \
                     np.array(data, dtype=np.uint32).reshape(track_len, 2)
+        if self._verbose:
+            print(f"Loaded {len(self.points3D)} bin points from {input_file}")
+
 
     def _load_points3D_txt(self, input_file):
         self.points3D = []
@@ -276,6 +298,8 @@ class SceneManager:
         self.point3D_ids = np.array(self.point3D_ids)
         self.point3D_colors = np.array(self.point3D_colors)
         self.point3D_errors = np.array(self.point3D_errors)
+        if self._verbose:
+            print(f"Loaded {len(self.points3D)} ascii points from {input_file}")
 
     #---------------------------------------------------------------------------
 
@@ -287,13 +311,13 @@ class SceneManager:
     #---------------------------------------------------------------------------
 
     def save_cameras(self, output_folder, output_file=None, binary=True):
-        if not os.path.exists(output_folder):
+        if not osp.exists(output_folder):
             os.makedirs(output_folder)
 
         if output_file is None:
             output_file = 'cameras.bin' if binary else 'cameras.txt'
 
-        output_file = os.path.join(output_folder, output_file)
+        output_file = osp.join(output_folder, output_file)
 
         if binary:
             self._save_cameras_bin(output_file)
@@ -325,13 +349,13 @@ class SceneManager:
     #---------------------------------------------------------------------------
 
     def save_images(self, output_folder, output_file=None, binary=True):
-        if not os.path.exists(output_folder):
+        if not osp.exists(output_folder):
             os.makedirs(output_folder)
 
         if output_file is None:
             output_file = 'images.bin' if binary else 'images.txt'
 
-        output_file = os.path.join(output_folder, output_file)
+        output_file = osp.join(output_folder, output_file)
 
         if binary:
             self._save_images_bin(output_file)
@@ -378,13 +402,13 @@ class SceneManager:
     #---------------------------------------------------------------------------
 
     def save_points3D(self, output_folder, output_file=None, binary=True):
-        if not os.path.exists(output_folder):
+        if not osp.exists(output_folder):
             os.makedirs(output_folder)
 
         if output_file is None:
             output_file = 'points3D.bin' if binary else 'points3D.txt'
 
-        output_file = os.path.join(output_folder, output_file)
+        output_file = osp.join(output_folder, output_file)
 
         if binary:
             self._save_points3D_bin(output_file)
