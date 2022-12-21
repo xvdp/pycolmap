@@ -1,15 +1,16 @@
 """as used by nerfies
 
 """
-from posix import listdir
+from typing import Optional, Tuple, Dict
 import subprocess as sp
 import os
 import os.path as osp
 import numpy as np
-from kotools import ObjDict
+from koreto import ObjDict
 from vidi import FF
 
 from pycolmap import SceneManager
+from cameras import Camera
 
 
 
@@ -137,4 +138,55 @@ class VideoCalibration:
 
 
 
-    
+def convert_colmap_camera(colmap_camera, colmap_image):
+    """Converts a pycolmap `image` to an SFM camera  - adapted from nerfies
+    """
+
+    camera_rotation = colmap_image.R()
+    camera_position = -(colmap_image.t @ camera_rotation)
+
+    new_camera = Camera(
+        orientation=camera_rotation,
+        position=camera_position,
+        focal_length=colmap_camera.fx,
+        pixel_aspect_ratio=colmap_camera.fx / colmap_camera.fx,
+        principal_point=np.array([colmap_camera.cx, colmap_camera.cy]),
+        radial_distortion=np.array([colmap_camera.k1, colmap_camera.k2, 0.0]),
+        tangential_distortion=np.array([colmap_camera.p1, colmap_camera.p2]),
+        skew=0.0,
+        image_size=np.array([colmap_camera.width, colmap_camera.height])
+    )
+    return new_camera
+
+
+def camera_to_rays(
+    camera: Camera,
+    image_shape: Optional[Tuple[int, int]] = None
+) -> Dict[str, np.ndarray]:
+  """Converts a vision sfm camera into rays.
+
+  Args:
+    camera: the camera to convert to rays.
+    image_shape: force the shape of the image. Default None.
+
+  Returns:
+    A dictionary of rays. Contains:
+      `origins`: the origin of each ray.
+      `directions`: unit vectors representing the direction of each ray.
+      `pixels`: the pixel centers of each ray.
+  """
+  camera = camera.copy()
+
+  if not image_shape:
+    image_shape = camera.image_shape
+
+  img_rays_origin = np.tile(camera.position[None, None, :],
+                            image_shape + (1,))
+  img_rays_dir = camera.pixels_to_rays(camera.get_pixel_centers())
+  img_rays_pixels = camera.get_pixel_centers()
+
+  return {
+      'origins': img_rays_origin.astype(np.float32),
+      'directions': img_rays_dir.astype(np.float32),
+      'pixels': img_rays_pixels.astype(np.float32),
+  }

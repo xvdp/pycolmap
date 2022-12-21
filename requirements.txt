@@ -1,5 +1,5 @@
 numpy>=1.15
 plyfile
 opencv-python>=3
-kotools@git+https://github.com/xvdp/kotools@main
+koreto@git+https://github.com/xvdp/koreto@main
 vidi@git+https://github.com/xvdp/vidi@master
