@@ -17,7 +17,7 @@ def setup_package():
     ''' setup '''
     metadata = dict(
         name='pycolmap',
-        version=set_version(version='0.0.2'),
+        version=set_version(version='0.0.3'),
         description='python >= 3.6',
         url="https://github.com/xvdp/pycolmap",
         author='True Price',
