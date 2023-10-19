@@ -660,6 +660,8 @@ class SceneManager:
             min_track_len=0, max_error=np.inf, min_tri_angle=0,
             max_tri_angle=180, image_set=None):
 
+        if image_set is None:
+            image_set = set()
         image_set = set(image_set)
 
         check_triangulation_angles = (min_tri_angle > 0 or max_tri_angle < 180)
