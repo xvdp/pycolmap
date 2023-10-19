@@ -2,7 +2,7 @@ import itertools
 # import sys
 # sys.path.append("..")
 
-from pycolmap import SceneManager
+from pycolmapwrap import SceneManager
 
 
 #-------------------------------------------------------------------------------
@@ -11,7 +11,7 @@ def main(args):
     scene_manager = SceneManager(args.input_folder)
     scene_manager.load()
 
-    with open(args.output_file, "w") as fid:
+    with open(args.output_file, "w", encoding="utf8") as fid:
         fid.write("NVM_V3\n \n{:d}\n".format(len(scene_manager.images)))
 
         image_fmt_str = " {:.3f} " + 7 * "{:.7f} "
