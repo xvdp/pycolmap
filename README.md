@@ -1,4 +1,4 @@
-# pycolmap
+# pycolmapwrap
 Python interface for COLMAP reconstructions, plus some convenient scripts for loading/modifying/converting reconstructions.
 
 This code does not, however, run reconstruction -- it only provides a convenient interface for handling COLMAP's output.
@@ -6,6 +6,7 @@ This code does not, however, run reconstruction -- it only provides a convenient
 ## modified xvdp
 * create setup installer
 * moved to python > 3.3
+* renamed pycolmap -> pycolmapwrap (to avoid confusion with https://github.com/colmap/pycolmap , python bindings for colmap
 
 ## dependencies
 git clone https://github.com/xvdp/koreto && cd koreto && pip install . && cd -
