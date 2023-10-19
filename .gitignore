@@ -5,5 +5,5 @@ build/
 dist/
 
 
-pycolmap.egg-info/
-pycolmap/version.py
+*.egg-info/
+*/version.py

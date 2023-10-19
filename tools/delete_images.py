@@ -2,7 +2,7 @@ import sys
 # sys.path.append("..")
 
 
-from pycolmap import SceneManager
+from pycolmapwrap import SceneManager
 
 
 #-------------------------------------------------------------------------------

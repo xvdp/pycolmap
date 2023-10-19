@@ -1,6 +1,6 @@
 
 import numpy as np
-from pycolmap import SceneManager
+from pycolmapwrap import SceneManager
 
 
 #-------------------------------------------------------------------------------
