@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 
-from pycolmap import Quaternion, SceneManager
+from pycolmapwrap import Quaternion, SceneManager
 
 
 #-------------------------------------------------------------------------------

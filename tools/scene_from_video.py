@@ -9,7 +9,7 @@ import numpy as np
 from koreto import ObjDict
 from vidi import FF
 
-from pycolmap import SceneManager
+from pycolmapwrap import SceneManager
 from cameras import Camera
 
 

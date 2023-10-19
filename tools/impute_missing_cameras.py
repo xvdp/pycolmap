@@ -1,6 +1,6 @@
 
 
-from pycolmap import DualQuaternion, Image, SceneManager
+from pycolmapwrap import DualQuaternion, Image, SceneManager
 
 
 #-------------------------------------------------------------------------------

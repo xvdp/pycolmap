@@ -5,7 +5,7 @@ import numpy as np
 
 from scipy.ndimage.interpolation import zoom
 from plyfile import PlyData, PlyElement
-from pycolmap import SceneManager
+from pycolmapwrap import SceneManager
 
 #-------------------------------------------------------------------------------
 
