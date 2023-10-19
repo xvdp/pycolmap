@@ -5,7 +5,7 @@ def readme():
         return _fo.read()
 
 def set_version(version):
-    with open('pycolmap/version.py', 'w') as _fi:
+    with open('pycolmapwrap/version.py', 'w') as _fi:
         _fi.write("version='"+version+"'")
     return version
 
@@ -19,7 +19,7 @@ def setup_package():
         name='pycolmap',
         version=set_version(version='0.0.3'),
         description='python >= 3.6',
-        url="https://github.com/xvdp/pycolmap",
+        url="https://github.com/xvdp/pycolmapwrap",
         author='True Price',
         license='MIT',
         install_requires=install_requires(),
