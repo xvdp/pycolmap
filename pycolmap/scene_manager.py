@@ -7,6 +7,7 @@ import struct
 from collections import OrderedDict, defaultdict
 from itertools import combinations
 
+import array
 import numpy as np
 
 from .camera import Camera
@@ -35,6 +36,7 @@ class SceneManager:
         self.cameras = OrderedDict()
         self.images = OrderedDict()
         self.name_to_image_id = dict()
+        self.scene_graph = dict()
 
         self.last_camera_id = 0
         self.last_image_id = 0
@@ -64,7 +66,7 @@ class SceneManager:
 
         if self.image_path is None:
             try:
-                with open(project_file, 'r') as f:
+                with open(project_file, 'r', encoding='utf8') as f:
                     for line in iter(f.readline, ''):
                         if line.startswith('image_path'):
                             self.image_path = line[11:].strip()
@@ -116,7 +118,7 @@ class SceneManager:
     def _load_cameras_txt(self, input_file):
         self.cameras = OrderedDict()
 
-        with open(input_file, 'r') as f:
+        with open(input_file, 'r', encoding='utf8') as f:
             num_cameras = 0
             for line in iter(lambda: f.readline().strip(), ''):
                 if not line or line.startswith('#'):
@@ -146,8 +148,50 @@ class SceneManager:
         else:
             self._load_images_txt(input_file)
 
-
     def _load_images_bin(self, input_file):
+        self.images = OrderedDict()
+
+        with open(input_file, 'rb') as f:
+            num_images = struct.unpack('L', f.read(8))[0]
+            image_struct = struct.Struct('<I 4d 3d I')
+            for _ in range(num_images):
+                data = image_struct.unpack(f.read(image_struct.size))
+                image_id = data[0]
+                q = Quaternion(np.array(data[1:5]))
+                t = np.array(data[5:8])
+                camera_id = data[8]
+                name = b''.join(c for c in iter(lambda: f.read(1), b'\x00')).decode()
+
+                image = Image(name, camera_id, q, t)
+                num_points2D = struct.unpack('Q', f.read(8))[0]
+
+                # Optimized code below.
+                # Read all elements as double first, then convert to array, slice it
+                # into points2d and ids, and convert ids back to unsigned long longs
+                # ('Q'). This is significantly faster than using O(num_points2D) f.read
+                # calls, experiments show >7x improvements in 60 image model, 23s -> 3s.
+                points_array = array.array('d')
+                points_array.fromfile(f, 3 * num_points2D)
+                points_elements = np.array(points_array).reshape((num_points2D, 3))
+                image.points2D = points_elements[:, :2]
+
+                ids_array = array.array('Q')
+                ids_array.frombytes(points_elements[:, 2].tobytes())
+                image.point3D_ids = np.array(ids_array, dtype=np.uint64).reshape(
+                    (num_points2D,))
+
+                # automatically remove points without an associated 3D point
+                #mask = (image.point3D_ids != SceneManager.INVALID_POINT3D)
+                #image.points2D = image.points2D[mask]
+                #image.point3D_ids = image.point3D_ids[mask]
+
+                self.images[image_id] = image
+                self.name_to_image_id[image.name] = image_id
+
+                self.last_image_id = max(self.last_image_id, image_id)
+
+
+    def _load_images_bin_old(self, input_file):
         self.images = OrderedDict()
         try:
             with open(input_file, 'rb') as f:
@@ -184,12 +228,12 @@ class SceneManager:
                 print(f"Loaded {num_images} bin images from {input_file}")
 
         except Exception as e:
-            logging.exception("Failure reading bin camera")
+            logging.exception(f"Failure reading bin camera {e}")
 
     def _load_images_txt(self, input_file):
         self.images = OrderedDict()
         num_images = 0
-        with open(input_file, 'r') as f:
+        with open(input_file, 'r', encoding='utf8') as f:
             is_camera_description_line = False
 
             for line in iter(lambda: f.readline().strip(), ''):
@@ -276,7 +320,7 @@ class SceneManager:
         self.point3D_id_to_images = dict()
         self.point3D_errors = []
 
-        with open(input_file, 'r') as f:
+        with open(input_file, 'r', encoding='utf8') as f:
             for line in iter(lambda: f.readline().strip(), ''):
                 if not line or line.startswith('#'):
                     continue
@@ -337,12 +381,12 @@ class SceneManager:
                 fid.write(camera.get_params().tobytes())
 
     def _save_cameras_txt(self, output_file):
-        with open(output_file, 'w') as fid:
+        with open(output_file, 'w', encoding="utf8") as fid:
             fid.write('# Camera list with one line of data per camera:\n')
             fid.write('#   CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n')
             fid.write(f'# Number of cameras: {len(self.cameras)}\n')
 
-            for camera_id, camera in sorted(self.cameras.items()):
+            for camera_id, _ in sorted(self.cameras.items()):
                 fid.write(f'{fid} {camera_id}\n')
 
 
@@ -378,17 +422,17 @@ class SceneManager:
                 fid.write(data.tobytes())
 
     def _save_images_txt(self, output_file):
-        with open(output_file, 'w') as fid:
+        with open(output_file, 'w', encoding="utf8") as fid:
             fid.write('# Image list with two lines of data per image:\n')
             fid.write('#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n')
             fid.write('#   POINTS2D[] as (X, Y, POINT3D_ID)\n')
-            fid.write('# Number of images: {},\n'.format(len(self.images)))
+            fid.write(f'# Number of images: {len(self.images)},\n')
             fid.write('mean observations per image: unknown\n')
 
             for image_id, image in self.images.items():
                 fid.write(f'{image_id}\n')
-                fid.write(' '.join(str(qi) for qi in image.q.q) + "\n"),
-                fid.write(' '.join(str(ti) for ti in image.tvec) + "\n"),
+                fid.write(' '.join([str(qi) for qi in image.q.q]) + "\n")
+                fid.write(' '.join([str(ti) for ti in image.tvec]) + "\n")
                 fid.write(f"{image.camera_id}, {image.name}")
 
                 data = np.rec.fromarrays(
@@ -448,7 +492,7 @@ class SceneManager:
         iter_point3D_id_to_point3D_idx = \
             self.point3D_id_to_point3D_idx.items()
 
-        with open(output_file, 'w') as fid:
+        with open(output_file, 'w', encoding="utf8") as fid:
             fid.write("# 3D point list with one line of data per point:\n")
             fid.write("#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as \n")
             fid.write("(IMAGE_ID, POINT2D_IDX)\n")
@@ -614,7 +658,7 @@ class SceneManager:
     # min/max triangulation angle: in degrees
     def filter_points3D(self,
             min_track_len=0, max_error=np.inf, min_tri_angle=0,
-            max_tri_angle=180, image_set=set()):
+            max_tri_angle=180, image_set=None):
 
         image_set = set(image_set)
 
@@ -677,7 +721,7 @@ class SceneManager:
         self.scene_graph = defaultdict(lambda: defaultdict(int))
         point3D_iter = self.point3D_id_to_images.items()
 
-        for i, (point3D_id, images) in enumerate(point3D_iter):
+        for _, (point3D_id, images) in enumerate(point3D_iter):
             if not self.point3D_valid(point3D_id):
                 continue
 
