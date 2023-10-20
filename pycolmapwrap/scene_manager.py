@@ -24,10 +24,11 @@ class SceneManager:
     INVALID_POINT3D = np.uint64(-1)
 
     def __init__(self, colmap_results_folder, image_path=None, verbose=False):
+        """ loads results from colmap project,
+        """
 
         self._verbose = verbose
         assert osp.isdir(colmap_results_folder), f"folder not found {colmap_results_folder}"
-        assert osp.isdir(image_path),  f"folder not found {image_path}"
 
         self.folder = colmap_results_folder
         self.image_path = None
@@ -92,7 +93,8 @@ class SceneManager:
             input_file = osp.join(self.folder, 'cameras.bin')
         if not osp.isfile(input_file):
             input_file = osp.join(self.folder, 'cameras.txt')
-        assert osp.isfile(input_file) and input_file[-4:] in (".bin", ".txt"), f"camera file {input_file} not found"
+        assert osp.isfile(input_file) and input_file[-4:] in (".bin", ".txt"), \
+            f"camera file {input_file} not found"
 
         if input_file[-4:] == ".bin":
             self._load_cameras_bin(input_file)
@@ -141,7 +143,8 @@ class SceneManager:
             input_file = osp.join(self.folder, 'images.bin')
         if not osp.isfile(input_file):
             input_file = osp.join(self.folder, 'images.txt')
-        assert osp.isfile(input_file) and input_file[-4:] in (".bin", ".txt"), f"image file {input_file} not found"
+        assert osp.isfile(input_file) and input_file[-4:] in (".bin", ".txt"), \
+            f"image file {input_file} not found"
 
         if input_file[-4:] == ".bin":
             self._load_images_bin(input_file)

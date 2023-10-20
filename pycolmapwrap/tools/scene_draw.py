@@ -1,9 +1,22 @@
+"""
+moved up from ../../tools
+visualized point and camera positions
+
+>>> from pycolmapwrap.tools import scene_draw
+>>> scene_draw.raw(colmap_path, image_path)
+
+colmap_path     contains cameras.bin  images.bin  points3D.bin
+    colmap default stores in sparse/0/
+
+image_path      contains images, not required for plotly viz
+
+"""
 import sys
 import os.path as osp
 import json
 import numpy as np
 import plotly.graph_objs as go
-from pycolmapwrap import SceneManager
+from .. import SceneManager
 
 
 
@@ -139,11 +152,11 @@ class Camera:
         for k in nerf:
             if isinstance(nerf[k], np.ndarray):
                 nerf[k] = nerf[k].tolist()
-        with open(name, 'w') as _fi:
+        with open(name, 'w', encoding='utf8') as _fi:
             json.dump(_fi, nerf)
 
     def from_nerf_json(self, name):
-        with open(name, 'r') as _fi:
+        with open(name, 'r', encoding='utf8') as _fi:
             nerf = json.load(_fi)
         self.from_nerf_sfm(nerf)
 

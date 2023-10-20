@@ -109,7 +109,7 @@ class Camera:
     @classmethod
     def from_json(cls, path):
         """Loads a JSON camera into memory."""
-        with open(path, 'r') as fp:
+        with open(path, 'r', encoding="utf8") as fp:
             camera_json = json.load(fp)
 
         return cls(
@@ -179,7 +179,7 @@ class Camera:
 
     def pixel_to_local_rays(self, pixels: np.ndarray):
         """Returns the local ray directions for the provided pixels."""
-        y = ((pixels[..., 1] - self.principal_point_y) / self.scale_factor_y)
+        y = (pixels[..., 1] - self.principal_point_y) / self.scale_factor_y
         x = ((pixels[..., 0] - self.principal_point_x - y * self.skew) /
             self.scale_factor_x)
 

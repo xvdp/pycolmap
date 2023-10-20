@@ -38,7 +38,7 @@ def interpolate_linear(images, camera_id, file_format):
             dq = t * prev_dq + (1. - t) * curr_dq
             q, t = dq.ToQT()
             new_images.append(
-                Image(file_format.format(prev_idx + i), args.camera_id, q, t))
+                Image(file_format.format(prev_idx + i), camera_id, q, t))
 
         prev_idx = curr_idx
         prev_dq = curr_dq
