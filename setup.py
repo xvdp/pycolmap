@@ -17,10 +17,10 @@ def setup_package():
     ''' setup '''
     metadata = dict(
         name='pycolmapwrap',
-        version=set_version(version='0.0.3'),
+        version=set_version(version='0.0.4'),
         description='python >= 3.6',
         url="https://github.com/xvdp/pycolmapwrap",
-        author='True Price',
+        author='from: True Price / mods: xvdp',
         license='MIT',
         install_requires=install_requires(),
         packages=find_packages(),
